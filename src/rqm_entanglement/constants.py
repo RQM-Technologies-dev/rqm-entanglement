@@ -6,6 +6,7 @@ All arrays have dtype ``np.complex128``.
 from __future__ import annotations
 
 import numpy as np
+from numpy.typing import NDArray
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Tolerances
@@ -18,24 +19,24 @@ RTOL: float = 1e-9
 # Identities
 # ──────────────────────────────────────────────────────────────────────────────
 
-I2: np.ndarray = np.eye(2, dtype=np.complex128)
-I4: np.ndarray = np.eye(4, dtype=np.complex128)
+I2: NDArray[np.complex128] = np.eye(2, dtype=np.complex128)
+I4: NDArray[np.complex128] = np.eye(4, dtype=np.complex128)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Single-qubit Paulis
 # ──────────────────────────────────────────────────────────────────────────────
 
-X: np.ndarray = np.array([[0, 1], [1, 0]], dtype=np.complex128)
-Y: np.ndarray = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
-Z: np.ndarray = np.array([[1, 0], [0, -1]], dtype=np.complex128)
+X: NDArray[np.complex128] = np.array([[0, 1], [1, 0]], dtype=np.complex128)
+Y: NDArray[np.complex128] = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
+Z: NDArray[np.complex128] = np.array([[1, 0], [0, -1]], dtype=np.complex128)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Two-qubit tensor-product Paulis
 # ──────────────────────────────────────────────────────────────────────────────
 
-XX: np.ndarray = np.kron(X, X).astype(np.complex128)
-YY: np.ndarray = np.kron(Y, Y).astype(np.complex128)
-ZZ: np.ndarray = np.kron(Z, Z).astype(np.complex128)
+XX: NDArray[np.complex128] = np.kron(X, X).astype(np.complex128)
+YY: NDArray[np.complex128] = np.kron(Y, Y).astype(np.complex128)
+ZZ: NDArray[np.complex128] = np.kron(Z, Z).astype(np.complex128)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Standard two-qubit gates  (computational basis |00>, |01>, |10>, |11>)
@@ -43,7 +44,7 @@ ZZ: np.ndarray = np.kron(Z, Z).astype(np.complex128)
 # ──────────────────────────────────────────────────────────────────────────────
 
 # CNOT: control = qubit 0, target = qubit 1
-CNOT: np.ndarray = np.array(
+CNOT: NDArray[np.complex128] = np.array(
     [
         [1, 0, 0, 0],
         [0, 1, 0, 0],
@@ -54,7 +55,7 @@ CNOT: np.ndarray = np.array(
 )
 
 # CZ: control = qubit 0, target = qubit 1
-CZ: np.ndarray = np.array(
+CZ: NDArray[np.complex128] = np.array(
     [
         [1, 0, 0, 0],
         [0, 1, 0, 0],
@@ -65,7 +66,7 @@ CZ: np.ndarray = np.array(
 )
 
 # SWAP
-SWAP: np.ndarray = np.array(
+SWAP: NDArray[np.complex128] = np.array(
     [
         [1, 0, 0, 0],
         [0, 0, 1, 0],
@@ -76,7 +77,7 @@ SWAP: np.ndarray = np.array(
 )
 
 # iSWAP
-ISWAP: np.ndarray = np.array(
+ISWAP: NDArray[np.complex128] = np.array(
     [
         [1, 0, 0, 0],
         [0, 0, 1j, 0],

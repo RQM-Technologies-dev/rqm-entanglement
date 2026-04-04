@@ -43,7 +43,7 @@ def density_matrix(psi: NDArray) -> NDArray[np.complex128]:  # type: ignore[type
     """Return the (4,4) density matrix ρ = |ψ><ψ|."""
     assert_state_vector(psi)
     psi_c = psi.astype(np.complex128)
-    return np.outer(psi_c, psi_c.conj())
+    return np.asarray(np.outer(psi_c, psi_c.conj()), dtype=np.complex128)
 
 
 def reduced_density_matrix(
