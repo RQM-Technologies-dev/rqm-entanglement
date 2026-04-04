@@ -9,7 +9,7 @@ from rqm_entanglement.canonical import (
     yy_rotation,
     zz_rotation,
 )
-from rqm_entanglement.validation import is_unitary
+from rqm_entanglement.validation import is_su4, is_unitary
 
 
 @pytest.mark.parametrize("theta", [0.0, np.pi / 4, np.pi / 2, np.pi, 2 * np.pi])
@@ -72,3 +72,16 @@ def test_xx_rotation_half_pi_structure():
     U = xx_rotation(np.pi / 2)
     expected = (1 / np.sqrt(2)) * (I4 - 1j * XX)
     np.testing.assert_allclose(U, expected, atol=1e-12)
+
+
+@pytest.mark.parametrize("theta", [0.0, np.pi / 7, np.pi / 3, -np.pi / 5])
+def test_canonical_entangler_zz_reduction(theta: float):
+    U = canonical_entangler(0.0, 0.0, theta)
+    np.testing.assert_allclose(U, zz_rotation(theta), atol=1e-12)
+
+
+def test_canonical_entangler_is_su4():
+    U = canonical_entangler(np.pi / 7, np.pi / 5, np.pi / 3)
+    assert is_unitary(U)
+    assert np.isclose(np.linalg.det(U), 1.0, atol=1e-12)
+    assert is_su4(U)

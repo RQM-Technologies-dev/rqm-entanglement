@@ -47,6 +47,16 @@ def test_local_unitary_x_x():
     np.testing.assert_allclose(XX @ ket01(), ket10(), atol=1e-12)
 
 
+def test_local_unitary_i2_x_on_ket00_gives_ket01():
+    U = local_unitary(I2, X)
+    np.testing.assert_allclose(U @ ket00(), ket01(), atol=1e-12)
+
+
+def test_local_unitary_x_i2_on_ket00_gives_ket10():
+    U = local_unitary(X, I2)
+    np.testing.assert_allclose(U @ ket00(), ket10(), atol=1e-12)
+
+
 def test_apply_unitary_identity():
     psi = ket00()
     result = apply_unitary(np.eye(4, dtype=np.complex128), psi)
@@ -67,3 +77,10 @@ def test_apply_unitary_wrong_shapes():
         apply_unitary(np.eye(4, dtype=np.complex128), np.array([1, 0], dtype=np.complex128))
     with pytest.raises(ValueError):
         apply_unitary(np.eye(2, dtype=np.complex128), ket00())  # type: ignore[arg-type]
+
+
+def test_apply_unitary_preserves_norm_for_unitary_input():
+    psi = (ket00() + ket11()) / np.sqrt(2)
+    U = local_unitary(X, I2)
+    out = apply_unitary(U, psi)
+    assert np.isclose(np.linalg.norm(out), 1.0, atol=1e-12)
