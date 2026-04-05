@@ -33,6 +33,12 @@ from rqm_entanglement.adapters.rqm_core_adapter import (
     local_from_quaternions,
     rqm_core_available,
 )
+from rqm_entanglement.analysis import (
+    EntanglementAnalysisOptions,
+    EntanglementAnalysisResult,
+    EntanglementMetric,
+    analyze_entanglement,
+)
 from rqm_entanglement.basis import (
     basis_state,
     computational_basis,
@@ -139,6 +145,11 @@ __all__ = [
     "operator_schmidt_rank",
     "is_local_product_operator",
     "local_product_factors",
+    # analysis API
+    "EntanglementMetric",
+    "EntanglementAnalysisResult",
+    "EntanglementAnalysisOptions",
+    "analyze_entanglement",
     # validation
     "assert_state_vector",
     "assert_two_qubit_operator",
