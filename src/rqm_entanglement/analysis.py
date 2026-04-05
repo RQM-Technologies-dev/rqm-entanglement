@@ -13,14 +13,19 @@ qubits are handled gracefully by returning a stable result shape with notes.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, NotRequired, Sequence, TypedDict
+from typing import Any, NotRequired, TypeAlias, TypedDict
 
 import numpy as np
 from numpy.typing import NDArray
 
 from rqm_entanglement.constants import ATOL
-from rqm_entanglement.measures import concurrence_pure, entanglement_entropy_pure, von_neumann_entropy
+from rqm_entanglement.measures import (
+    concurrence_pure,
+    entanglement_entropy_pure,
+    von_neumann_entropy,
+)
 from rqm_entanglement.states import density_matrix, normalize_state, reduced_density_matrix
 from rqm_entanglement.validation import is_unitary
 
@@ -58,6 +63,9 @@ class _MetricBundle:
     entropy: float
     mutual_information: float
     rqm_correlation: float | None
+
+
+_GateSequence: TypeAlias = list[tuple[str, NDArray[np.complex128]]]
 
 
 def _is_finite_array(arr: NDArray[Any]) -> bool:
@@ -156,7 +164,7 @@ def _build_probe_states() -> list[NDArray[np.complex128]]:
     return probes_2q
 
 
-def _extract_gate_sequence(circuit_or_unitary: Any) -> list[tuple[str, NDArray[np.complex128]]] | None:
+def _extract_gate_sequence(circuit_or_unitary: Any) -> _GateSequence | None:
     if isinstance(circuit_or_unitary, np.ndarray):
         return None
 
@@ -167,7 +175,7 @@ def _extract_gate_sequence(circuit_or_unitary: Any) -> list[tuple[str, NDArray[n
     if not isinstance(gate_like, Sequence):
         return None
 
-    sequence: list[tuple[str, NDArray[np.complex128]]] = []
+    sequence: _GateSequence = []
     for idx, item in enumerate(gate_like):
         if isinstance(item, np.ndarray):
             sequence.append((f"gate[{idx}]", item.astype(np.complex128)))
@@ -359,7 +367,12 @@ def analyze_entanglement(
                 atol=atol,
                 include_rqm_correlation=include_rqm_correlation,
             )
-            concurrence = _sanitize_scalar(metric_bundle.concurrence, lower=0.0, upper=1.0, atol=atol)
+            concurrence = _sanitize_scalar(
+                metric_bundle.concurrence,
+                lower=0.0,
+                upper=1.0,
+                atol=atol,
+            )
             return {
                 "has_entangling_gates": bool(concurrence > atol),
                 "entangled_pairs": _format_metric_entries(
@@ -385,7 +398,9 @@ def analyze_entanglement(
                 notes.append("Input unitary contains non-finite entries; metrics sanitized.")
                 return _stable_empty_result(notes)
             if not is_unitary(U, atol=atol):
-                notes.append("Input matrix is not unitary within tolerance; results are best-effort.")
+                notes.append(
+                    "Input matrix is not unitary within tolerance; results are best-effort."
+                )
             score, representative = _entangling_score_from_unitary(U, probes, atol=atol)
             metric_bundle = _entanglement_metrics_for_state(
                 representative,

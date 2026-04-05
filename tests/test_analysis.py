@@ -101,3 +101,14 @@ def test_analyze_entanglement_deterministic_for_identical_input() -> None:
     second = analyze_entanglement(psi)
     assert first == second
 
+
+def test_analyze_entanglement_non_finite_state_is_sanitized() -> None:
+    psi_bad = np.array([np.nan + 0j, 0.0, 0.0, 1.0], dtype=np.complex128)
+    result = analyze_entanglement(psi_bad)
+
+    assert result["has_entangling_gates"] is False
+    assert result["entangled_pairs"] == []
+    assert result["fidelity_preserved"] is None
+    assert result["notes"]
+    assert any("non-finite" in note for note in result["notes"])
+

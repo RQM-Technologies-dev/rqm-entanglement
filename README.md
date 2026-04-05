@@ -84,6 +84,119 @@ print(entanglement_entropy_pure(psi))  # ~1.0
 
 ---
 
+## Stable entanglement analysis API (for rqm-api / Studio)
+
+For integration points like `rqm-api` endpoint `/v1/entanglement/analyze`,
+use the stable exported function:
+
+```python
+from rqm_entanglement import analyze_entanglement
+```
+
+```python
+from rqm_entanglement import CNOT, I2, Y, ket00, local_unitary, apply_unitary, analyze_entanglement
+import numpy as np
+
+def ry(theta: float) -> np.ndarray:
+    return np.cos(theta / 2) * I2 - 1j * np.sin(theta / 2) * Y
+
+psi0 = ket00()
+psi_bell = apply_unitary(CNOT @ local_unitary(ry(np.pi / 2), I2), psi0)
+
+result = analyze_entanglement(psi_bell)
+print(result)
+```
+
+Result schema:
+
+```python
+{
+  "has_entangling_gates": bool,
+  "entangled_pairs": [
+    {
+      "pair": [0, 1],
+      "metric_name": str,
+      "metric_value": float,
+      "interpretation": str,  # optional
+    }
+  ],
+  "last_entangling_gate": str,  # optional
+  "fidelity_preserved": float | None,
+  "notes": [str],
+}
+```
+
+Example (Bell-state-like input):
+
+```python
+{
+  "has_entangling_gates": True,
+  "entangled_pairs": [
+    {"pair": [0, 1], "metric_name": "Concurrence", "metric_value": 1.0},
+    {"pair": [0, 1], "metric_name": "Entropy", "metric_value": 1.0},
+    {"pair": [0, 1], "metric_name": "Mutual Information", "metric_value": 2.0},
+    {"pair": [0, 1], "metric_name": "RQM Correlation", "metric_value": 1.0},
+  ],
+  "fidelity_preserved": None,
+  "notes": [],
+}
+```
+
+Input forms accepted by `analyze_entanglement`:
+
+- pure state vector `(4,)`
+- unitary / SU(4) matrix `(4,4)`
+- gate sequence (list of `(4,4)` matrices), including:
+  - unnamed gates: `[U0, U1, ...]`
+  - named gates: `[("gate_name", U), ...]`
+  - dict-like entries: `[{"name": "...", "unitary": U}, ...]`
+
+---
+
+## Metric formulas and conventions
+
+Basis ordering is always `|00>, |01>, |10>, |11>` with qubit 0 as the
+more-significant (left) index.
+
+For a pure state
+`|psi> = [a00, a01, a10, a11]^T`:
+
+- **Concurrence**
+  - `C = 2 * |a00*a11 - a01*a10|`
+  - Range: `[0, 1]`
+  - `0` for product states, `1` for maximally entangled states
+- **Entanglement Entropy**
+  - `S(rho_A) = -Tr(rho_A log2 rho_A)` (bits), where `rho_A` is reduced density
+    matrix of either qubit for pure two-qubit states
+  - Range: `[0, 1]`
+- **Mutual Information**
+  - `I(A:B) = S(rho_A) + S(rho_B) - S(rho_AB)` (bits)
+  - For pure two-qubit states, `S(rho_AB)=0`, so `I(A:B)=2*S(rho_A)` and range
+    is `[0, 2]`
+- **RQM Correlation** (optional experimental metric)
+  - `0.5 * (clamped_concurrence + clamped_entropy)`
+  - Range: `[0, 1]`
+
+Numerical conventions:
+
+- tiny negative eigenvalues from floating-point roundoff are clipped to `0`
+- output metrics are clamped to physically valid ranges
+- non-finite values (`NaN`/`Inf`) are sanitized to stable values with notes
+- metric ordering is deterministic for identical input
+
+---
+
+## Scope and current limits
+
+- Primary support: **2-qubit SU(4)/state analysis**
+- Inputs that appear to represent `>2` qubits are handled gracefully:
+  - no crash
+  - stable output schema
+  - explanatory `notes`
+- Full generic multi-qubit entanglement analysis is out of scope for v0.1.
+
+---
+
 ## Installation
 
 ```bash
