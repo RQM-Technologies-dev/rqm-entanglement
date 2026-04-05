@@ -112,3 +112,67 @@ def test_analyze_entanglement_non_finite_state_is_sanitized() -> None:
     assert result["notes"]
     assert any("non-finite" in note for note in result["notes"])
 
+
+def test_analyze_entanglement_rqm_contract_h_then_cx() -> None:
+    # Mirrors Studio/API payload contract: H on q0 then CX(0,1).
+    payload = {
+        "schema_version": "0.1",
+        "num_qubits": 2,
+        "name": "bell-contract-test",
+        "instructions": [
+            {
+                "gate": {"name": "h", "arity": 1},
+                "targets": [{"index": 0, "type": "qubit"}],
+            },
+            {
+                "gate": {"name": "cx", "arity": 2},
+                "targets": [
+                    {"index": 0, "type": "qubit"},
+                    {"index": 1, "type": "qubit"},
+                ],
+            },
+        ],
+    }
+    result = analyze_entanglement(payload)
+
+    assert result["has_entangling_gates"] is True
+    assert result["last_entangling_gate"] == "cx"
+    assert _metric_value(result, "Concurrence") == pytest.approx(1.0, abs=1e-9)
+    assert _metric_value(result, "Entropy") == pytest.approx(1.0, abs=1e-9)
+    assert _metric_value(result, "Mutual Information") == pytest.approx(2.0, abs=1e-9)
+
+
+def test_analyze_entanglement_rqm_contract_local_only_not_entangling() -> None:
+    payload = {
+        "schema_version": "0.1",
+        "num_qubits": 2,
+        "instructions": [
+            {
+                "gate": {"name": "x", "arity": 1},
+                "targets": [{"index": 0, "type": "qubit"}],
+            },
+            {
+                "gate": {"name": "z", "arity": 1},
+                "targets": [{"index": 1, "type": "qubit"}],
+            },
+        ],
+    }
+    result = analyze_entanglement(payload)
+
+    assert result["has_entangling_gates"] is False
+    assert "last_entangling_gate" not in result
+    assert _metric_value(result, "Concurrence") == pytest.approx(0.0, abs=1e-12)
+
+
+def test_analyze_entanglement_rqm_contract_more_than_two_qubits_graceful() -> None:
+    payload = {
+        "schema_version": "0.1",
+        "num_qubits": 3,
+        "instructions": [],
+    }
+    result = analyze_entanglement(payload)
+    assert result["has_entangling_gates"] is False
+    assert result["entangled_pairs"] == []
+    assert result["notes"]
+    assert any(">2 qubits" in note for note in result["notes"])
+

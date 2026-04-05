@@ -150,6 +150,31 @@ Input forms accepted by `analyze_entanglement`:
   - unnamed gates: `[U0, U1, ...]`
   - named gates: `[("gate_name", U), ...]`
   - dict-like entries: `[{"name": "...", "unitary": U}, ...]`
+- RQM circuit payload (Studio/API contract style), e.g.:
+  ```json
+  {
+    "schema_version": "0.1",
+    "num_qubits": 2,
+    "instructions": [
+      {
+        "gate": { "name": "h", "arity": 1 },
+        "targets": [{ "index": 0, "type": "qubit" }]
+      },
+      {
+        "gate": { "name": "cx", "arity": 2 },
+        "targets": [
+          { "index": 0, "type": "qubit" },
+          { "index": 1, "type": "qubit" }
+        ]
+      }
+    ]
+  }
+  ```
+  Supported contract gate names currently include:
+  - single-qubit: `i`, `x`, `y`, `z`, `h`, `s`, `sdg`, `t`, `tdg`, `rx`, `ry`, `rz`
+  - two-qubit: `cx`/`cnot`, `cz`, `swap`, `iswap`
+  Unsupported instructions are skipped with explanatory `notes` while preserving
+  the stable result schema.
 
 ---
 
