@@ -20,6 +20,7 @@ from typing import Any, NotRequired, TypeAlias, TypedDict, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from rqm_entanglement.adapters.rqm_core_adapter import su2_from_quaternion_components
 from rqm_entanglement.constants import ATOL, CNOT, CZ, I2, ISWAP, SWAP, X, Y, Z
 from rqm_entanglement.measures import (
     concurrence_pure,
@@ -173,6 +174,33 @@ def _extract_angle(params: dict[str, Any]) -> float | None:
     return None
 
 
+def _parameter_map(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        return dict(raw)
+    if not isinstance(raw, list):
+        return {}
+
+    params: dict[str, Any] = {}
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str):
+            continue
+        params[name] = item.get("value")
+    return params
+
+
+def _quaternion_components(params: dict[str, Any]) -> tuple[float, float, float, float] | None:
+    values: list[float] = []
+    for name in ("w", "x", "y", "z"):
+        value = params.get(name)
+        if not isinstance(value, (int, float)):
+            return None
+        values.append(float(value))
+    return values[0], values[1], values[2], values[3]
+
+
 def _single_qubit_gate_matrix(
     gate_name: str,
     params: dict[str, Any],
@@ -206,6 +234,14 @@ def _single_qubit_gate_matrix(
         return np.array([[1.0, 0.0], [0.0, np.exp(1.0j * np.pi / 4.0)]], dtype=np.complex128)
     if name in {"tdg", "tdag"}:
         return np.array([[1.0, 0.0], [0.0, np.exp(-1.0j * np.pi / 4.0)]], dtype=np.complex128)
+    if name == "u1q":
+        components = _quaternion_components(params)
+        if components is None:
+            return None
+        try:
+            return su2_from_quaternion_components(*components)
+        except (ImportError, TypeError, ValueError):
+            return None
     if name in {"rx", "ry", "rz"}:
         theta = _extract_angle(params)
         if theta is None:
@@ -242,11 +278,17 @@ def _two_qubit_gate_matrix(
 def _extract_instruction_targets(
     instruction: dict[str, Any],
 ) -> list[int] | None:
-    targets = instruction.get("targets")
-    if not isinstance(targets, list):
+    return _target_indices(instruction.get("targets"))
+
+
+def _target_indices(items: Any) -> list[int] | None:
+    if not isinstance(items, list):
         return None
     indices: list[int] = []
-    for target in targets:
+    for target in items:
+        if isinstance(target, int):
+            indices.append(target)
+            continue
         if not isinstance(target, dict):
             return None
         index = target.get("index")
@@ -300,17 +342,32 @@ def _extract_rqm_circuit_sequence(
         if targets is None:
             notes.append(f"Skipping instruction[{idx}] ({gate_name}) due to invalid targets.")
             continue
-        if any(target not in (0, 1) for target in targets):
+        controls = _target_indices(instruction.get("controls")) if "controls" in instruction else []
+        if controls is None:
+            notes.append(f"Skipping instruction[{idx}] ({gate_name}) due to invalid controls.")
+            continue
+        if any(target not in (0, 1) for target in targets + controls):
             notes.append(
-                f"Skipping instruction[{idx}] ({gate_name}) because targets must be qubits 0 or 1."
+                f"Skipping instruction[{idx}] ({gate_name}) because targets and controls must be qubits 0 or 1."
             )
             continue
 
-        params = instruction.get("params")
-        params_dict = params if isinstance(params, dict) else {}
+        params_dict = _parameter_map(instruction.get("params"))
 
         gate_matrix: NDArray[np.complex128] | None
-        if len(targets) == 1:
+        if controls:
+            if gate_name in {"cx", "cnot"} and len(controls) == 1 and len(targets) == 1:
+                gate_matrix = _two_qubit_gate_matrix("cx", [controls[0], targets[0]])
+            elif gate_name == "cz" and len(controls) == 1 and len(targets) == 1:
+                gate_matrix = _two_qubit_gate_matrix("cz", [controls[0], targets[0]])
+            else:
+                gate_matrix = None
+            if gate_matrix is None:
+                notes.append(
+                    f"Skipping unsupported controlled gate '{gate_name}' in instruction[{idx}]."
+                )
+                continue
+        elif len(targets) == 1:
             gate_1q = _single_qubit_gate_matrix(gate_name, params_dict)
             if gate_1q is None:
                 notes.append(

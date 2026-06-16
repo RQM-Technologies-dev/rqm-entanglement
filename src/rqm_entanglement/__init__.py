@@ -26,12 +26,13 @@ Classification:
     operator_schmidt_rank, is_local_product_operator, local_product_factors
 
 Adapter:
-    rqm_core_available, local_from_quaternions
+    rqm_core_available, local_from_quaternions, su2_from_quaternion_components
 """
 
 from rqm_entanglement.adapters.rqm_core_adapter import (
     local_from_quaternions,
     rqm_core_available,
+    su2_from_quaternion_components,
 )
 from rqm_entanglement.analysis import (
     EntanglementAnalysisOptions,
@@ -174,4 +175,5 @@ __all__ = [
     # adapter
     "rqm_core_available",
     "local_from_quaternions",
+    "su2_from_quaternion_components",
 ]

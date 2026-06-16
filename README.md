@@ -4,7 +4,8 @@
 It provides tensor-product state and operator helpers, the canonical commuting
 nonlocal gate family, pure-state entanglement measures (concurrence, Schmidt
 decomposition, von Neumann entropy), and operator Schmidt-rank classification —
-all with a minimal numpy-only runtime.
+with `rqm-core` supplying canonical quaternion/SU(2) conversion for optimized
+single-qubit gates.
 
 ---
 
@@ -23,9 +24,10 @@ For RQM Technologies, better coordinates mean better measurement: more informati
 | `rqm-core` | quaternion math, SU(2), single-qubit geometry, quat→2×2 unitary mapping |
 | `rqm-entanglement` | two-qubit tensor structure, canonical nonlocal generators, entanglement measures, operator classification |
 
-All `rqm-core` integration lives in `src/rqm_entanglement/adapters/rqm_core_adapter.py`
-and is fully optional.  If `rqm-core` is not installed the adapter raises a
-clear `ImportError` only when its functions are called.
+All `rqm-core` integration lives in `src/rqm_entanglement/adapters/rqm_core_adapter.py`.
+That adapter is the only place Entanglement imports Core, and the measured
+circuit analyzers use it for canonical `u1q` quaternion gates emitted by
+`rqm-compiler`.
 
 ---
 
@@ -179,7 +181,7 @@ Input forms accepted by `analyze_entanglement`:
   }
   ```
   Supported contract gate names currently include:
-  - single-qubit: `i`, `x`, `y`, `z`, `h`, `s`, `sdg`, `t`, `tdg`, `rx`, `ry`, `rz`
+  - single-qubit: `i`, `x`, `y`, `z`, `h`, `s`, `sdg`, `t`, `tdg`, `rx`, `ry`, `rz`, `u1q`
   - two-qubit: `cx`/`cnot`, `cz`, `swap`, `iswap`
   Unsupported instructions are skipped with explanatory `notes` while preserving
   the stable result schema.

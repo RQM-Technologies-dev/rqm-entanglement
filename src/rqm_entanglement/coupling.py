@@ -14,6 +14,7 @@ from typing import Any, NotRequired, TypedDict
 import numpy as np
 from numpy.typing import NDArray
 
+from rqm_entanglement.adapters.rqm_core_adapter import su2_from_quaternion_components
 from rqm_entanglement.constants import ATOL, CNOT, CZ, I2, ISWAP, SWAP, X, Y, Z
 from rqm_entanglement.measures import concurrence_pure, entanglement_entropy_pure
 from rqm_entanglement.tensor import local_unitary
@@ -89,6 +90,7 @@ _SUPPORTED_MEASURED_GATES = {
     "t",
     "tdg",
     "tdag",
+    "u1q",
     "rx",
     "ry",
     "rz",
@@ -115,6 +117,33 @@ def _extract_angle(params: dict[str, Any]) -> float | None:
     return None
 
 
+def _parameter_map(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        return dict(raw)
+    if not isinstance(raw, list):
+        return {}
+
+    params: dict[str, Any] = {}
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str):
+            continue
+        params[name] = item.get("value")
+    return params
+
+
+def _quaternion_components(params: dict[str, Any]) -> tuple[float, float, float, float] | None:
+    values: list[float] = []
+    for name in ("w", "x", "y", "z"):
+        value = params.get(name)
+        if not isinstance(value, (int, float)):
+            return None
+        values.append(float(value))
+    return values[0], values[1], values[2], values[3]
+
+
 def _single_qubit_gate_matrix(name: str, params: dict[str, Any]) -> NDArray[np.complex128] | None:
     gate = name.lower()
     if gate in {"i", "id", "identity"}:
@@ -135,6 +164,14 @@ def _single_qubit_gate_matrix(name: str, params: dict[str, Any]) -> NDArray[np.c
         return np.array([[1.0, 0.0], [0.0, np.exp(1.0j * np.pi / 4.0)]], dtype=np.complex128)
     if gate in {"tdg", "tdag"}:
         return np.array([[1.0, 0.0], [0.0, np.exp(-1.0j * np.pi / 4.0)]], dtype=np.complex128)
+    if gate == "u1q":
+        components = _quaternion_components(params)
+        if components is None:
+            return None
+        try:
+            return su2_from_quaternion_components(*components)
+        except (ImportError, TypeError, ValueError):
+            return None
     if gate in {"rx", "ry", "rz"}:
         theta = _extract_angle(params)
         if theta is None:
@@ -202,13 +239,12 @@ def _parse_instructions(circuit: dict[str, Any]) -> tuple[list[_ParsedInstructio
             notes.append(f"Skipping instruction[{idx}] ({gate_name}) due to invalid targets.")
             continue
 
-        params = instruction.get("params")
         parsed.append(
             {
                 "name": gate_name.lower(),
                 "targets": targets,
                 "controls": controls,
-                "params": params if isinstance(params, dict) else {},
+                "params": _parameter_map(instruction.get("params")),
             }
         )
     return parsed, notes

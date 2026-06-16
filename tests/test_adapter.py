@@ -8,6 +8,7 @@ from rqm_entanglement.adapters.rqm_core_adapter import (
     _import_rqm_core,
     local_from_quaternions,
     rqm_core_available,
+    su2_from_quaternion_components,
 )
 from rqm_entanglement.validation import is_unitary
 
@@ -61,3 +62,13 @@ def test_local_from_quaternions_when_available():
     assert U.shape == (4, 4)
     assert U.dtype == np.complex128
     assert is_unitary(U)
+
+
+def test_su2_from_quaternion_components_when_available():
+    if not rqm_core_available():
+        pytest.skip("rqm-core is unavailable after adapter discovery")
+
+    matrix = su2_from_quaternion_components(1.0, 0.0, 0.0, 0.0)
+    assert matrix.shape == (2, 2)
+    assert matrix.dtype == np.complex128
+    assert is_unitary(matrix)

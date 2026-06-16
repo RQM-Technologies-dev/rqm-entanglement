@@ -4,8 +4,7 @@ This module is the *only* place that imports from ``rqm-core``.  The rest of
 this package works without it.
 
 If ``rqm-core`` is not installed, :func:`rqm_core_available` returns
-``False`` and :func:`local_from_quaternions` raises ``ImportError`` with a
-clear message.
+``False`` and adapter helpers raise ``ImportError`` with a clear message.
 """
 
 from __future__ import annotations
@@ -114,6 +113,26 @@ def _get_su2_from_quaternion() -> Any:
         "Looked for public names first (quaternion_to_su2, then fallbacks) "
         "and submodule exports. Expected one of: " + ", ".join(candidates)
     )
+
+
+def su2_from_quaternion_components(
+    w: float,
+    x: float,
+    y: float,
+    z: float,
+) -> NDArray[np.complex128]:
+    """Return rqm-core's canonical SU(2) matrix for quaternion components."""
+    rqm_core = _import_rqm_core()
+    quaternion_cls = getattr(rqm_core, "Quaternion", None)
+    q = quaternion_cls(w, x, y, z) if callable(quaternion_cls) else (w, x, y, z)
+    su2_from_quat = _get_su2_from_quaternion()
+    matrix: NDArray[np.complex128] = np.asarray(su2_from_quat(q), dtype=np.complex128)
+    if matrix.shape != (2, 2):
+        raise ValueError(
+            "rqm_core quaternion conversion returned malformed matrix: "
+            f"expected shape (2, 2), got {matrix.shape}"
+        )
+    return matrix
 
 
 def local_from_quaternions(q1: Any, q2: Any) -> NDArray[np.complex128]:
