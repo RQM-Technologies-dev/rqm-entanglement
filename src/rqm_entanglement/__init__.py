@@ -58,6 +58,14 @@ from rqm_entanglement.classify import (
     local_product_factors,
     operator_schmidt_rank,
 )
+from rqm_entanglement.coupling import (
+    CouplingAnalysisOptions,
+    CouplingAnalysisResult,
+    CouplingMetric,
+    PreservationAnalysisResult,
+    analyze_circuit_coupling,
+    analyze_optimization_preservation,
+)
 from rqm_entanglement.constants import (
     ATOL,
     CNOT,
@@ -150,6 +158,12 @@ __all__ = [
     "EntanglementAnalysisResult",
     "EntanglementAnalysisOptions",
     "analyze_entanglement",
+    "CouplingMetric",
+    "CouplingAnalysisResult",
+    "CouplingAnalysisOptions",
+    "PreservationAnalysisResult",
+    "analyze_circuit_coupling",
+    "analyze_optimization_preservation",
     # validation
     "assert_state_vector",
     "assert_two_qubit_operator",
