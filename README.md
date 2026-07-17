@@ -7,13 +7,10 @@ decomposition, von Neumann entropy), and operator Schmidt-rank classification â€
 with `rqm-core` supplying canonical quaternion/SU(2) conversion for optimized
 single-qubit gates.
 
----
-
-## Better Coordinates for Better Measurement
-
-This project uses quaternions because they preserve more of what physical systems are doing: phase, rotation, orientation, polarization, and coherence. Standard complex-number methods are powerful, but they can flatten these relationships too early. Quaternionic coordinates keep them together as one structured object, giving software a richer view of the measured system.
-
-For RQM Technologies, better coordinates mean better measurement: more informative diagnostics, cleaner transformations, and more precise control across quantum, wave, sensing, imaging, and communications workflows.
+It uses ordinary complex tensor products and standard entanglement measures.
+Local quaternion adapters provide equivalent `SU(2)` coordinates; they do not
+define native quaternionic composite mechanics. See
+[RQM_TECHNICAL_CANON_V2.md](RQM_TECHNICAL_CANON_V2.md).
 
 ---
 
@@ -208,7 +205,7 @@ For a pure state
   - `I(A:B) = S(rho_A) + S(rho_B) - S(rho_AB)` (bits)
   - For pure two-qubit states, `S(rho_AB)=0`, so `I(A:B)=2*S(rho_A)` and range
     is `[0, 2]`
-- **RQM Correlation** (optional experimental metric)
+- **RQM Correlation** (optional software summary metric, not new physics)
   - `0.5 * (clamped_concurrence + clamped_entropy)`
   - Range: `[0, 1]`
 
