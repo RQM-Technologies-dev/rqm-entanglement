@@ -6,10 +6,8 @@ is as a superoperator.  Rank 1 means the operator is a local product A ⊗ B.
 Note on SWAP
 ------------
 SWAP has operator Schmidt rank > 1 (it is a nonlocal operator), but it maps
-every product state to another product state.  This package does *not* expose
-a generic ``is_entangling_gate`` function, because classifying SWAP and similar
-operators requires a full KAK / Cartan decomposition that is not implemented
-in v0.1.
+every product state to another product state. The higher-level SU(4)
+classification API preserves that distinction using canonical Weyl data.
 """
 
 from __future__ import annotations

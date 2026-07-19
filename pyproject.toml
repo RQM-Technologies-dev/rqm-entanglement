@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rqm-entanglement"
-version = "0.1.0"
+version = "0.2.0"
 description = "Two-qubit / nonlocal layer of the RQM quantum stack."
 readme = "README.md"
 license = { text = "MIT" }
@@ -15,11 +15,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+qiskit = [
+    "qiskit>=2.3,<3",
+]
 dev = [
     "pytest>=7",
     "pytest-cov",
     "ruff>=0.4",
     "mypy>=1.8",
+    "qiskit>=2.3,<3",
 ]
 
 [tool.setuptools.packages.find]

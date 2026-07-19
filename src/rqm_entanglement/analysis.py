@@ -49,6 +49,22 @@ class EntanglementAnalysisResult(TypedDict, total=False):
     last_entangling_gate: NotRequired[str]
     fidelity_preserved: float | None
     notes: list[str]
+    su4: SU4AnalysisResult
+
+
+class SU4AnalysisResult(TypedDict):
+    """Additive arbitrary-SU(4) analysis payload for unitary inputs."""
+
+    cartan: list[float]
+    weyl_class: str
+    weyl_chamber_valid: bool
+    nonlocal_fingerprint: str
+    full_canonical_hash: str
+    operator_schmidt_rank: int
+    local_quaternions: dict[str, list[float]]
+    global_phase: float
+    reconstruction_error: float
+    convention_version: str
 
 
 class EntanglementAnalysisOptions(TypedDict, total=False):
@@ -348,7 +364,8 @@ def _extract_rqm_circuit_sequence(
             continue
         if any(target not in (0, 1) for target in targets + controls):
             notes.append(
-                f"Skipping instruction[{idx}] ({gate_name}) because targets and controls must be qubits 0 or 1."
+                f"Skipping instruction[{idx}] ({gate_name}) because targets and controls "
+                "must be qubits 0 or 1."
             )
             continue
 
@@ -665,6 +682,39 @@ def analyze_entanglement(
             }
             if has_entangling:
                 result["last_entangling_gate"] = "input_unitary"
+            if is_unitary(U, atol=atol):
+                try:
+                    from rqm_entanglement.su4 import (
+                        QuaternionCartanBlock,
+                        classify_su4,
+                        phase_aligned_operator_error,
+                    )
+
+                    block = QuaternionCartanBlock.from_unitary(U)
+                    classification = classify_su4(block)
+                    reconstruction_error, _ = phase_aligned_operator_error(U, block.to_unitary())
+                    result["su4"] = {
+                        "cartan": list(block.cartan),
+                        "weyl_class": classification.class_label,
+                        "weyl_chamber_valid": classification.weyl_chamber_valid,
+                        "nonlocal_fingerprint": classification.nonlocal_fingerprint,
+                        "full_canonical_hash": classification.full_canonical_hash,
+                        "operator_schmidt_rank": classification.operator_schmidt_rank,
+                        "local_quaternions": {
+                            "left_q0": list(block.left_q0),
+                            "left_q1": list(block.left_q1),
+                            "right_q0": list(block.right_q0),
+                            "right_q1": list(block.right_q1),
+                        },
+                        "global_phase": block.global_phase,
+                        "reconstruction_error": reconstruction_error,
+                        "convention_version": block.convention_version,
+                    }
+                except ImportError:
+                    notes.append(
+                        "Arbitrary SU(4) decomposition requires the optional Qiskit dependency; "
+                        "legacy analysis fields remain available."
+                    )
             return result
 
         if arr.shape[0] == arr.shape[1] and arr.shape[0] > 4:

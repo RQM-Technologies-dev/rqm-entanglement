@@ -1,11 +1,11 @@
 # rqm-entanglement
 
 `rqm-entanglement` is the two-qubit / nonlocal layer of the RQM quantum stack.
-It provides tensor-product state and operator helpers, the canonical commuting
-nonlocal gate family, pure-state entanglement measures (concurrence, Schmidt
-decomposition, von Neumann entropy), and operator Schmidt-rank classification —
-with `rqm-core` supplying canonical quaternion/SU(2) conversion for optimized
-single-qubit gates.
+It provides tensor-product state and operator helpers, arbitrary two-qubit
+quaternion–Cartan decomposition, Weyl classification and local-equivalence
+fingerprints, the canonical commuting nonlocal gate family, pure-state
+entanglement measures, and operator Schmidt-rank classification. `rqm-core`
+remains the authority for canonical quaternion/SU(2) conversion.
 
 It uses ordinary complex tensor products and standard entanglement measures.
 Local quaternion adapters provide equivalent `SU(2)` coordinates; they do not
@@ -19,7 +19,7 @@ define native quaternionic composite mechanics. See
 | Layer | Owns |
 |---|---|
 | `rqm-core` | quaternion math, SU(2), single-qubit geometry, quat→2×2 unitary mapping |
-| `rqm-entanglement` | two-qubit tensor structure, canonical nonlocal generators, entanglement measures, operator classification |
+| `rqm-entanglement` | two-qubit tensor structure, arbitrary SU(4) quaternion–Cartan decomposition, Weyl classification, nonlocal fingerprints, entanglement analysis |
 
 All `rqm-core` integration lives in `src/rqm_entanglement/adapters/rqm_core_adapter.py`.
 That adapter is the only place Entanglement imports Core, and the measured
@@ -33,6 +33,9 @@ circuit analyzers use it for canonical `u1q` quaternion gates emitted by
 Computational basis: **|00⟩, |01⟩, |10⟩, |11⟩**  
 Qubit 0 is the more-significant (left) index.  
 CNOT: control = qubit 0, target = qubit 1.
+
+The verified optional-Qiskit factor order is
+`qiskit-Klr:kron(q1=Kl,q0=Kr);circuit-little-endian`.
 
 ---
 
@@ -52,19 +55,35 @@ where `exp[-i θ/2 P] = cos(θ/2) I4 - i sin(θ/2) P` for P ∈ {XX, YY, ZZ}.
 
 ---
 
-## v0.1 scope – mathematical honesty
+## Quaternion–Cartan SU(4)
 
-This release does **not** implement a full KAK / Cartan decomposition or a
-generic arbitrary-SU(4) classifier.  It implements:
+Version 0.2 promotes the tested EXP-012 representation:
 
-- operator Schmidt rank and local-product detection
-- pure-state concurrence and separability
-- entanglement entropy via partial trace and von Neumann entropy
+```python
+from rqm_entanglement import QuaternionCartanBlock, classify_su4
 
-**SWAP note**: SWAP has operator Schmidt rank > 1 (it is a nonlocal operator),
-but it maps every product state to another product state.  This package does
-*not* label SWAP as a generic "entangling gate"; doing so correctly requires
-a full Cartan analysis that is deferred to a later release.
+block = QuaternionCartanBlock.from_unitary(unitary)  # requires [qiskit]
+assert block.validate()["valid"]
+reconstructed = block.to_unitary()
+classification = classify_su4(block)
+```
+
+Stored Weyl coordinates use `exp[i(a XX + b YY + c ZZ)]`. Existing
+`canonical_entangler(c1,c2,c3)` uses
+`exp[-i/2(c1 XX + c2 YY + c3 ZZ)]`; use `weyl_to_rotation_coordinates` and
+`rotation_to_weyl_coordinates` for the exact conversion.
+
+Reconstruction, serialization, hashes, classification of an existing block,
+and canonical-entangler construction do not import Qiskit. Generic arbitrary
+SU(4) decomposition uses the optional public Qiskit Weyl authority:
+
+```bash
+pip install -e ".[qiskit]"
+```
+
+The classifier distinguishes nonlocal operator, entangling-gate,
+perfect-entangler, and SWAP-like status. SWAP remains truthfully nonlocal while
+not being labeled as a gate that entangles product inputs.
 
 ---
 
@@ -183,6 +202,12 @@ Input forms accepted by `analyze_entanglement`:
   Unsupported instructions are skipped with explanatory `notes` while preserving
   the stable result schema.
 
+For a finite unitary `(4,4)` input, the result additively includes `su4` with
+Cartan coordinates, Weyl class, both hashes, operator Schmidt rank, local
+quaternion shells, global phase, reconstruction error, and convention version.
+When the optional Qiskit dependency is absent, all legacy fields remain
+available and `notes` explains why decomposition was omitted.
+
 ---
 
 ## Metric formulas and conventions
@@ -225,7 +250,13 @@ Numerical conventions:
   - no crash
   - stable output schema
   - explanatory `notes`
-- Full generic multi-qubit entanglement analysis is out of scope for v0.1.
+- Full generic multi-qubit entanglement analysis is out of scope.
+
+The tested quaternion–Cartan representation is standard complex quantum
+mechanics. It is not unique quantum information or native quaternionic
+composite mechanics, and it carries no general synthesis, runtime, or IBM
+hardware superiority claim. See
+[`docs/EXP012_PROMOTION_PROVENANCE.md`](docs/EXP012_PROMOTION_PROVENANCE.md).
 
 ---
 

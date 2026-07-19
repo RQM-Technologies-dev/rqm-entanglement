@@ -10,6 +10,7 @@ If ``rqm-core`` is not installed, :func:`rqm_core_available` returns
 from __future__ import annotations
 
 import importlib
+import math
 import pkgutil
 import sys
 from pathlib import Path
@@ -17,6 +18,10 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+
+QuaternionTuple = tuple[float, float, float, float]
+_FLOAT_TOL = 1e-12
+_SIGN_TOL = 1e-14
 
 
 def rqm_core_available() -> bool:
@@ -133,6 +138,108 @@ def su2_from_quaternion_components(
             f"expected shape (2, 2), got {matrix.shape}"
         )
     return matrix
+
+
+def _quaternion_tuple(value: Any) -> QuaternionTuple:
+    """Return a normalized finite quaternion tuple using ``rqm-core``."""
+    if all(hasattr(value, name) for name in ("w", "x", "y", "z")):
+        values = tuple(float(getattr(value, name)) for name in ("w", "x", "y", "z"))
+    else:
+        values = tuple(float(component) for component in value)
+    if len(values) != 4 or not np.all(np.isfinite(values)):
+        raise ValueError("a quaternion requires exactly four finite values")
+    rqm_core = _import_rqm_core()
+    quaternion_cls = getattr(rqm_core, "Quaternion", None)
+    if not callable(quaternion_cls):
+        raise ImportError("rqm_core does not expose its canonical Quaternion type")
+    quaternion = quaternion_cls(*values)
+    if quaternion.norm() <= _FLOAT_TOL:
+        raise ValueError("zero quaternion is invalid")
+    normalized = quaternion.normalize()
+    result = (normalized.w, normalized.x, normalized.y, normalized.z)
+    return tuple(0.0 if abs(component) <= 1e-16 else float(component) for component in result)  # type: ignore[return-value]
+
+
+def quaternion_to_su2_matrix(quaternion: Any) -> NDArray[np.complex128]:
+    """Convert four quaternion components through ``rqm-core``'s SU(2) authority."""
+    return su2_from_quaternion_components(*_quaternion_tuple(quaternion))
+
+
+def su2_matrix_to_quaternion(matrix: NDArray[np.complex128]) -> QuaternionTuple:
+    """Convert an SU(2) matrix through ``rqm-core`` and return finite components."""
+    value = np.asarray(matrix, dtype=np.complex128)
+    if value.shape != (2, 2) or not np.all(np.isfinite(value)):
+        raise ValueError("SU(2) matrix must be finite and have shape (2,2)")
+    rqm_core = _import_rqm_core()
+    converter = getattr(rqm_core, "su2_to_quaternion", None)
+    if not callable(converter):
+        raise ImportError("rqm_core does not expose su2_to_quaternion")
+    return _quaternion_tuple(converter(value))
+
+
+def canonicalize_quaternion_sign_with_phase(
+    quaternion: Any,
+    global_phase: float,
+    *,
+    atol: float = _SIGN_TOL,
+) -> tuple[QuaternionTuple, float, bool]:
+    """Freeze the quaternion sign and compensate the enclosing U(4) phase.
+
+    The first component whose magnitude exceeds ``atol`` is made positive.  This
+    implements ``w > 0`` with the first nonzero ``x/y/z`` component as the
+    boundary tie-breaker.  A sign flip changes an SU(2) factor by ``-1``, so the
+    enclosing global phase is reduced by pi to preserve exact U(4) semantics.
+    """
+    values = np.asarray(_quaternion_tuple(quaternion), dtype=np.float64)
+    pivot = next((float(item) for item in values if abs(float(item)) > atol), 0.0)
+    flipped = pivot < 0.0
+    phase = float(global_phase)
+    if not math.isfinite(phase):
+        raise ValueError("global phase must be finite")
+    if flipped:
+        values = -values
+        phase -= math.pi
+    values[np.abs(values) <= 1e-16] = 0.0
+    return tuple(float(item) for item in values), phase, flipped  # type: ignore[return-value]
+
+
+def normalize_local_su2_factor(
+    matrix: NDArray[np.complex128],
+    *,
+    atol: float = _FLOAT_TOL,
+) -> tuple[QuaternionTuple, float, bool, float]:
+    """Remove a U(2) determinant phase and encode the SU(2) factor as a quaternion.
+
+    Returns ``(quaternion, removed_phase, sign_flipped, reconstruction_error)``.
+    The returned ``removed_phase`` already includes sign-canonicalization
+    compensation and can be added directly to an enclosing U(4) phase.
+    """
+    value = np.asarray(matrix, dtype=np.complex128)
+    if value.shape != (2, 2) or not np.all(np.isfinite(value)):
+        raise ValueError("local factor must be a finite 2x2 matrix")
+    unitarity_error = float(
+        np.max(np.abs(value.conj().T @ value - np.eye(2, dtype=np.complex128)))
+    )
+    if unitarity_error > atol:
+        raise ValueError(f"local factor is not unitary: {unitarity_error}")
+    determinant = np.linalg.det(value)
+    if abs(abs(determinant) - 1.0) > atol:
+        raise ValueError("local determinant does not have unit modulus")
+    removed_phase = 0.5 * float(np.angle(determinant))
+    special = value * np.exp(-1j * removed_phase)
+    if abs(np.linalg.det(special) - 1.0) > 1e-10:
+        special = -special
+        removed_phase += math.pi
+    quaternion = su2_matrix_to_quaternion(special)
+    quaternion, removed_phase, flipped = canonicalize_quaternion_sign_with_phase(
+        quaternion, removed_phase
+    )
+    reconstructed = quaternion_to_su2_matrix(quaternion)
+    target = -special if flipped else special
+    error = float(np.max(np.abs(reconstructed - target)))
+    if error > 1e-10:
+        raise ValueError(f"quaternion/SU(2) conversion mismatch: {error}")
+    return quaternion, removed_phase, flipped, error
 
 
 def local_from_quaternions(q1: Any, q2: Any) -> NDArray[np.complex128]:

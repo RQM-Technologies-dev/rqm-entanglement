@@ -30,9 +30,13 @@ Adapter:
 """
 
 from rqm_entanglement.adapters.rqm_core_adapter import (
+    canonicalize_quaternion_sign_with_phase,
     local_from_quaternions,
+    normalize_local_su2_factor,
+    quaternion_to_su2_matrix,
     rqm_core_available,
     su2_from_quaternion_components,
+    su2_matrix_to_quaternion,
 )
 from rqm_entanglement.analysis import (
     EntanglementAnalysisOptions,
@@ -59,14 +63,6 @@ from rqm_entanglement.classify import (
     local_product_factors,
     operator_schmidt_rank,
 )
-from rqm_entanglement.coupling import (
-    CouplingAnalysisOptions,
-    CouplingAnalysisResult,
-    CouplingMetric,
-    PreservationAnalysisResult,
-    analyze_circuit_coupling,
-    analyze_optimization_preservation,
-)
 from rqm_entanglement.constants import (
     ATOL,
     CNOT,
@@ -83,6 +79,14 @@ from rqm_entanglement.constants import (
     Y,
     Z,
 )
+from rqm_entanglement.coupling import (
+    CouplingAnalysisOptions,
+    CouplingAnalysisResult,
+    CouplingMetric,
+    PreservationAnalysisResult,
+    analyze_circuit_coupling,
+    analyze_optimization_preservation,
+)
 from rqm_entanglement.measures import (
     concurrence_pure,
     entanglement_entropy_pure,
@@ -95,6 +99,21 @@ from rqm_entanglement.states import (
     normalize_state,
     reduced_density_matrix,
     state_from_amplitudes,
+)
+from rqm_entanglement.su4 import (
+    CONVENTION_VERSION,
+    QuaternionCartanBlock,
+    SU4Classification,
+    are_locally_equivalent,
+    cartan_core_from_weyl,
+    classify_su4,
+    decompose_su4,
+    in_weyl_chamber,
+    nonlocal_fingerprint,
+    phase_aligned_operator_error,
+    reconstruct_su4,
+    rotation_to_weyl_coordinates,
+    weyl_to_rotation_coordinates,
 )
 from rqm_entanglement.tensor import apply_unitary, kron, local_unitary
 from rqm_entanglement.validation import (
@@ -144,6 +163,20 @@ __all__ = [
     "yy_rotation",
     "zz_rotation",
     "canonical_entangler",
+    "cartan_core_from_weyl",
+    "weyl_to_rotation_coordinates",
+    "rotation_to_weyl_coordinates",
+    # arbitrary SU(4)
+    "CONVENTION_VERSION",
+    "QuaternionCartanBlock",
+    "SU4Classification",
+    "decompose_su4",
+    "reconstruct_su4",
+    "classify_su4",
+    "are_locally_equivalent",
+    "nonlocal_fingerprint",
+    "in_weyl_chamber",
+    "phase_aligned_operator_error",
     # measures
     "concurrence_pure",
     "is_separable_pure",
@@ -176,4 +209,8 @@ __all__ = [
     "rqm_core_available",
     "local_from_quaternions",
     "su2_from_quaternion_components",
+    "su2_matrix_to_quaternion",
+    "quaternion_to_su2_matrix",
+    "normalize_local_su2_factor",
+    "canonicalize_quaternion_sign_with_phase",
 ]
