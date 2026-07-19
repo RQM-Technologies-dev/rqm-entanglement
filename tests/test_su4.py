@@ -121,10 +121,42 @@ def test_json_binary_hash_and_phase_round_trips() -> None:
     assert block.nonlocal_fingerprint() == from_binary.nonlocal_fingerprint()
 
 
-def test_local_equivalence_fingerprint_and_full_hash_distinction() -> None:
+@pytest.mark.parametrize(
+    ("left_q0", "left_q1", "right_q0", "right_q1"),
+    [
+        (
+            _unit_quaternion((0.73, -0.31, 0.21, 0.55)),
+            (1.0, 0.0, 0.0, 0.0),
+            (1.0, 0.0, 0.0, 0.0),
+            (1.0, 0.0, 0.0, 0.0),
+        ),
+        (
+            (1.0, 0.0, 0.0, 0.0),
+            _unit_quaternion((0.61, 0.44, -0.33, 0.57)),
+            _unit_quaternion((0.82, -0.19, 0.46, 0.27)),
+            (1.0, 0.0, 0.0, 0.0),
+        ),
+        (
+            _unit_quaternion((0.68, 0.39, -0.41, 0.32)),
+            _unit_quaternion((0.77, -0.28, 0.18, 0.54)),
+            _unit_quaternion((0.59, 0.51, 0.43, -0.37)),
+            _unit_quaternion((0.86, -0.16, -0.38, 0.29)),
+        ),
+        (
+            _unit_quaternion((0.52, -0.62, 0.35, 0.47)),
+            _unit_quaternion((0.64, 0.22, 0.69, -0.25)),
+            _unit_quaternion((0.74, -0.45, -0.31, 0.38)),
+            _unit_quaternion((0.57, 0.49, -0.53, 0.39)),
+        ),
+    ],
+)
+def test_four_local_equivalence_orbits_preserve_fingerprint_and_distinguish_full_hash(
+    left_q0: tuple[float, ...],
+    left_q1: tuple[float, ...],
+    right_q0: tuple[float, ...],
+    right_q1: tuple[float, ...],
+) -> None:
     identity_q = (1.0, 0.0, 0.0, 0.0)
-    left = _unit_quaternion((0.73, -0.31, 0.21, 0.55))
-    right = _unit_quaternion((0.61, 0.44, -0.33, 0.57))
     base = QuaternionCartanBlock.from_components(
         left_q0=identity_q,
         left_q1=identity_q,
@@ -135,17 +167,19 @@ def test_local_equivalence_fingerprint_and_full_hash_distinction() -> None:
         right_q1=identity_q,
     )
     orbit = QuaternionCartanBlock.from_components(
-        left_q0=left,
-        left_q1=right,
+        left_q0=left_q0,
+        left_q1=left_q1,
         cartan_a=0.51,
         cartan_b=0.24,
         cartan_c=-0.11,
-        right_q0=identity_q,
-        right_q1=identity_q,
+        right_q0=right_q0,
+        right_q1=right_q1,
     )
-    assert are_locally_equivalent(base, orbit)
-    assert base.nonlocal_fingerprint() == orbit.nonlocal_fingerprint()
-    assert base.full_canonical_hash() != orbit.full_canonical_hash()
+    recovered_base = decompose_su4(base.to_unitary())
+    recovered_orbit = decompose_su4(orbit.to_unitary())
+    assert are_locally_equivalent(recovered_base, recovered_orbit)
+    assert recovered_base.nonlocal_fingerprint() == recovered_orbit.nonlocal_fingerprint()
+    assert recovered_base.full_canonical_hash() != recovered_orbit.full_canonical_hash()
 
 
 def test_quaternion_w_near_zero_sign_boundary_preserves_semantics() -> None:
