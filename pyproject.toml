@@ -11,19 +11,19 @@ license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
     "numpy",
-    "rqm-core @ git+https://github.com/RQM-Technologies-dev/rqm-core.git",
+    "rqm-core @ git+https://github.com/RQM-Technologies-dev/rqm-core.git@f3a9988871e4f9f44c85a2b0ac726014ada3b58b",
 ]
 
 [project.optional-dependencies]
 qiskit = [
-    "qiskit>=2.3,<3",
+    "qiskit>=2.3,<2.4",
 ]
 dev = [
     "pytest>=7",
     "pytest-cov",
     "ruff>=0.4",
     "mypy>=1.8",
-    "qiskit>=2.3,<3",
+    "qiskit>=2.3,<2.4",
 ]
 
 [tool.setuptools.packages.find]

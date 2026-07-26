@@ -424,6 +424,27 @@ class SU4Classification:
         }
 
 
+@dataclass(frozen=True)
+class VerifiedSU4Decomposition:
+    """Proof-carrying result for a dense two-qubit decomposition."""
+
+    block: QuaternionCartanBlock
+    classification: SU4Classification
+    reconstruction_error: float
+    tolerance: float
+    verified: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return JSON-compatible decomposition evidence."""
+        return {
+            "block": self.block.to_dict(),
+            "classification": self.classification.to_dict(),
+            "reconstruction_error": self.reconstruction_error,
+            "tolerance": self.tolerance,
+            "verified": self.verified,
+        }
+
+
 _LANDMARKS: tuple[tuple[str, tuple[float, float, float]], ...] = (
     ("local_identity", (0.0, 0.0, 0.0)),
     ("cnot_cz_class", (math.pi / 4.0, 0.0, 0.0)),
@@ -491,6 +512,38 @@ def classify_su4(
 def decompose_su4(unitary: NDArray[np.complex128]) -> QuaternionCartanBlock:
     """Return the canonical production quaternion-Cartan block."""
     return QuaternionCartanBlock.from_unitary(unitary)
+
+
+def decompose_su4_verified(
+    unitary: NDArray[np.complex128],
+    *,
+    tolerance: float = RECONSTRUCTION_TOLERANCE,
+    source_hash: str | None = None,
+) -> VerifiedSU4Decomposition:
+    """Decompose and independently verify a finite two-qubit unitary.
+
+    The function fails closed: a decomposition whose phase-aligned
+    reconstruction error exceeds ``tolerance`` raises ``ValueError``.
+    """
+    if not math.isfinite(tolerance) or tolerance <= 0.0:
+        raise ValueError("tolerance must be a positive finite number")
+    source = np.asarray(unitary, dtype=np.complex128)
+    block = QuaternionCartanBlock.from_unitary(source, source_hash=source_hash)
+    validation = block.validate()
+    reconstruction_error, _ = phase_aligned_operator_error(source, block.to_unitary())
+    verified = bool(validation["valid"] and reconstruction_error <= tolerance)
+    if not verified:
+        raise ValueError(
+            "SU(4) decomposition failed reconstruction proof: "
+            f"error={reconstruction_error}, tolerance={tolerance}"
+        )
+    return VerifiedSU4Decomposition(
+        block=block,
+        classification=classify_su4(block, tolerance=tolerance),
+        reconstruction_error=reconstruction_error,
+        tolerance=float(tolerance),
+        verified=True,
+    )
 
 
 def reconstruct_su4(block: QuaternionCartanBlock) -> NDArray[np.complex128]:

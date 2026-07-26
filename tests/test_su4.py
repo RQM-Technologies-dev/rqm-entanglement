@@ -18,11 +18,27 @@ from rqm_entanglement import (
     cartan_core_from_weyl,
     classify_su4,
     decompose_su4,
+    decompose_su4_verified,
     phase_aligned_operator_error,
     quaternion_to_su2_matrix,
     rotation_to_weyl_coordinates,
     weyl_to_rotation_coordinates,
 )
+
+
+def test_verified_decomposition_carries_reconstruction_evidence() -> None:
+    source = CNOT
+    evidence = decompose_su4_verified(source, source_hash="fixture")
+    assert evidence.verified is True
+    assert evidence.reconstruction_error <= 1e-10
+    assert evidence.block.source_hash == "fixture"
+    assert evidence.classification.class_label == "cnot_cz_class"
+    assert evidence.to_dict()["verified"] is True
+
+
+def test_verified_decomposition_rejects_invalid_tolerance() -> None:
+    with pytest.raises(ValueError, match="positive finite"):
+        decompose_su4_verified(CNOT, tolerance=0.0)
 
 
 def _random_su4(seed: int) -> np.ndarray:
