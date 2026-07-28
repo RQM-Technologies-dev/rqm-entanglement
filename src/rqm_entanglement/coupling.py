@@ -155,7 +155,10 @@ def _single_qubit_gate_matrix(name: str, params: dict[str, Any]) -> NDArray[np.c
     if gate == "z":
         return Z
     if gate == "h":
-        return np.array([[1.0, 1.0], [1.0, -1.0]], dtype=np.complex128) / np.sqrt(2.0)
+        return np.asarray(
+            np.array([[1.0, 1.0], [1.0, -1.0]], dtype=np.complex128) / np.sqrt(2.0),
+            dtype=np.complex128,
+        )
     if gate == "s":
         return np.array([[1.0, 0.0], [0.0, 1.0j]], dtype=np.complex128)
     if gate in {"sdg", "sdag"}:
@@ -177,7 +180,10 @@ def _single_qubit_gate_matrix(name: str, params: dict[str, Any]) -> NDArray[np.c
         if theta is None:
             return None
         generator = {"rx": X, "ry": Y, "rz": Z}[gate]
-        return np.cos(theta / 2.0) * I2 - 1.0j * np.sin(theta / 2.0) * generator
+        return np.asarray(
+            np.cos(theta / 2.0) * I2 - 1.0j * np.sin(theta / 2.0) * generator,
+            dtype=np.complex128,
+        )
     return None
 
 
@@ -396,7 +402,8 @@ def _pair_metrics(
 
 
 def _state_fidelity(left: NDArray[np.complex128], right: NDArray[np.complex128]) -> float:
-    return round(float(min(1.0, abs(np.vdot(left, right)) ** 2)), 10)
+    overlap_magnitude = float(np.abs(np.vdot(left, right)))
+    return round(min(1.0, overlap_magnitude**2), 10)
 
 
 def analyze_circuit_coupling(
