@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/RQM-Technologies-dev/rqm-entanglement/compare/v0.2.1...v0.2.2) (2026-07-29)
+
+
+### Documentation
+
+* name the canonical entanglement API consumer ([#12](https://github.com/RQM-Technologies-dev/rqm-entanglement/issues/12)) ([de368d0](https://github.com/RQM-Technologies-dev/rqm-entanglement/commit/de368d0d30741f8c1f0ed9d483246b6f24e81afa))
+
 ## [0.2.1](https://github.com/RQM-Technologies-dev/rqm-entanglement/compare/v0.2.0...v0.2.1) (2026-07-29)
 
 
