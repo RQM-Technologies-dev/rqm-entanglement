@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rqm-entanglement"
-version = "0.2.0"
+version = "0.2.1"
 description = "Two-qubit / nonlocal layer of the RQM quantum stack."
 readme = "README.md"
 license = { text = "Apache-2.0" }
