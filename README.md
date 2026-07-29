@@ -110,9 +110,9 @@ print(entanglement_entropy_pure(psi))  # ~1.0
 
 ---
 
-## Stable entanglement analysis API (for rqm-api / Studio)
+## Stable entanglement analysis API (for quantum-compiler-api / Studio)
 
-For integration points like `rqm-api` endpoint `/v1/entanglement/analyze`,
+For integration points like `quantum-compiler-api` endpoint `/v1/entanglement/analyze`,
 use the stable exported function:
 
 ```python

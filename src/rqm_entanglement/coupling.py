@@ -1,7 +1,7 @@
 """Canonical coupling / entanglement analysis for RQM circuit payloads.
 
 This module owns nonlocal circuit analysis for the RQM stack.  It accepts the
-public ``rqm-circuits``-style wire shape used by ``rqm-api`` and Studio, keeps
+public ``rqm-circuits``-style wire shape used by ``quantum-compiler-api`` and Studio, keeps
 qualitative gate detection separate from measured state analysis, and uses the
 ``rqm-entanglement`` basis convention: ``|00>, |01>, |10>, |11>`` with qubit 0
 as the left / more-significant qubit.
