@@ -24,6 +24,7 @@ from rqm_entanglement import (
     rotation_to_weyl_coordinates,
     weyl_to_rotation_coordinates,
 )
+from rqm_entanglement.su4 import normalize_global_phase_value
 
 
 def test_verified_decomposition_carries_reconstruction_evidence() -> None:
@@ -88,6 +89,14 @@ def test_rotation_and_weyl_conventions_are_exact() -> None:
         canonical_entangler(*rotations),
         atol=1e-14,
     )
+
+
+def test_global_phase_normalization_is_idempotent_below_negative_pi() -> None:
+    source = math.nextafter(-math.pi, -math.inf)
+    normalized = normalize_global_phase_value(source)
+
+    assert normalized == -math.pi
+    assert normalize_global_phase_value(normalized) == normalized
 
 
 def test_asymmetric_qiskit_factor_ordering() -> None:

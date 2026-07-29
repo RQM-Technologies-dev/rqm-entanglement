@@ -51,7 +51,7 @@ def normalize_global_phase_value(phase: float) -> float:
     wrapped = (float(phase) + math.pi) % (2.0 * math.pi) - math.pi
     if abs(wrapped) <= _PHASE_TOLERANCE:
         return 0.0
-    if abs(wrapped + math.pi) <= _PHASE_TOLERANCE:
+    if abs(abs(wrapped) - math.pi) <= _PHASE_TOLERANCE:
         return -math.pi
     return wrapped
 
