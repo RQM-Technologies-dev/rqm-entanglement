@@ -4,7 +4,7 @@ The compiler rule is simple: keep the lowest-dimensional representation that
 preserves the proven structure, and promote only when an operation leaves that
 representation closed.
 
-This module does not replace standard complex quantum mechanics.  Every
+This module does not replace standard complex quantum mechanics. Every
 representation materializes exactly to the existing two-qubit unitary/state
 semantics, so the compressed forms are compiler IRs with a conventional
 verification path.
@@ -12,16 +12,21 @@ verification path.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
 import math
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
 
 from rqm_entanglement.adapters.rqm_core_adapter import QuaternionTuple
-from rqm_entanglement.canonical import canonical_entangler, xx_rotation, yy_rotation, zz_rotation
+from rqm_entanglement.canonical import (
+    canonical_entangler,
+    xx_rotation,
+    yy_rotation,
+    zz_rotation,
+)
 from rqm_entanglement.su4 import QuaternionCartanBlock, rotation_to_weyl_coordinates
 
 Axis = Literal["xx", "yy", "zz"]
@@ -29,7 +34,7 @@ IDENTITY_QUATERNION: QuaternionTuple = (1.0, 0.0, 0.0, 0.0)
 _TOL = 1e-12
 
 
-class RelationalLevel(str, Enum):
+class RelationalLevel(StrEnum):
     """Ordered conceptual levels used by the adaptive relational IR."""
 
     BELL = "bell"
@@ -43,7 +48,7 @@ class BellHinge:
     """Compressed Bell-sector state representation.
 
     ``parity`` is the ZZ eigenvalue and ``phase`` is the XX eigenvalue.
-    The four sign pairs identify Phi+/Phi-/Psi+/Psi- respectively.  The
+    The four sign pairs identify Phi+/Phi-/Psi+/Psi- respectively. The
     maximally-entangled hinge angle is fixed at pi/2.
     """
 
@@ -67,19 +72,15 @@ class BellHinge:
         }[(self.parity, self.phase)]
 
     def to_state(self) -> NDArray[np.complex128]:
-        """Materialize the conventional Bell state in |00>,|01>,|10>,|11> order."""
+        """Materialize the conventional Bell state."""
         sign = float(self.phase)
         norm = 1.0 / math.sqrt(2.0)
         if self.parity == 1:
             return np.array([norm, 0.0, 0.0, sign * norm], dtype=np.complex128)
         return np.array([0.0, norm, sign * norm, 0.0], dtype=np.complex128)
 
-    def apply_local_pauli(self, pauli: Literal["i", "x", "z", "xz"]) -> "BellHinge":
-        """Update the Bell symmetry sector without expanding the state vector.
-
-        Applying X to either one qubit flips parity.  Applying Z to either one
-        qubit flips the XX phase sector.  XZ flips both.
-        """
+    def apply_local_pauli(self, pauli: Literal["i", "x", "z", "xz"]) -> BellHinge:
+        """Update the Bell symmetry sector without expanding the state vector."""
         if pauli == "i":
             return self
         if pauli == "x":
@@ -111,13 +112,17 @@ class AxisHinge:
             return yy_rotation(self.theta)
         return zz_rotation(self.theta)
 
-    def compose_same_axis(self, other: "AxisHinge") -> "AxisHinge":
+    def compose_same_axis(self, other: AxisHinge) -> AxisHinge:
         if self.axis != other.axis:
             raise ValueError("different hinge axes require promotion to CartanRelation")
         return AxisHinge(self.axis, self.theta + other.theta)
 
-    def promote(self) -> "CartanRelation":
-        coords = {"xx": (self.theta, 0.0, 0.0), "yy": (0.0, self.theta, 0.0), "zz": (0.0, 0.0, self.theta)}
+    def promote(self) -> CartanRelation:
+        coords: dict[Axis, tuple[float, float, float]] = {
+            "xx": (self.theta, 0.0, 0.0),
+            "yy": (0.0, self.theta, 0.0),
+            "zz": (0.0, 0.0, self.theta),
+        }
         return CartanRelation(*coords[self.axis])
 
 
@@ -136,16 +141,24 @@ class CartanRelation:
     def to_unitary(self) -> NDArray[np.complex128]:
         return canonical_entangler(self.c1, self.c2, self.c3)
 
-    def compose(self, other: "CartanRelation") -> "CartanRelation":
+    def compose(self, other: CartanRelation) -> CartanRelation:
         """Compose aligned Cartan cores exactly by coordinate addition."""
-        return CartanRelation(self.c1 + other.c1, self.c2 + other.c2, self.c3 + other.c3)
+        return CartanRelation(
+            self.c1 + other.c1,
+            self.c2 + other.c2,
+            self.c3 + other.c3,
+        )
 
-    def minimize(self, *, atol: float = _TOL) -> AxisHinge | "CartanRelation":
-        active = [("xx", self.c1), ("yy", self.c2), ("zz", self.c3)]
+    def minimize(self, *, atol: float = _TOL) -> AxisHinge | CartanRelation:
+        active: tuple[tuple[Axis, float], ...] = (
+            ("xx", self.c1),
+            ("yy", self.c2),
+            ("zz", self.c3),
+        )
         nonzero = [(axis, value) for axis, value in active if abs(value) > atol]
         if len(nonzero) == 1:
             axis, value = nonzero[0]
-            return AxisHinge(axis, value)  # type: ignore[arg-type]
+            return AxisHinge(axis, value)
         return self
 
     def promote(self) -> QuaternionCartanBlock:
@@ -188,8 +201,6 @@ def promote_with_local_frames(
 ) -> QuaternionCartanBlock:
     """Promote a nonlocal relation when independent local frames are required."""
     cartan = relation.promote() if isinstance(relation, AxisHinge) else relation
-    if isinstance(cartan, AxisHinge):  # defensive; AxisHinge.promote returns CartanRelation
-        cartan = cartan.promote()
     a, b, c = rotation_to_weyl_coordinates(cartan.c1, cartan.c2, cartan.c3)
     return QuaternionCartanBlock.from_components(
         left_q0=left_q0,
@@ -203,49 +214,60 @@ def promote_with_local_frames(
     )
 
 
-def compose_relations(left: RelationalOperator, right: RelationalOperator) -> RelationalOperator:
-    """Compose while staying in the smallest representation known to be closed.
-
-    Same-axis hinges stay one-dimensional.  Different axis hinges promote to
-    the commuting three-coordinate Cartan relation.  Aligned Cartan relations
-    remain Cartan.  Any composition involving local quaternion shells is
-    recanonicalized through ``QuaternionCartanBlock.from_unitary``; that exact
-    general path uses the repository's optional Qiskit Weyl authority.
-    """
+def compose_relations(
+    left: RelationalOperator,
+    right: RelationalOperator,
+) -> RelationalOperator:
+    """Compose while staying in the smallest representation known to be closed."""
     if isinstance(left, AxisHinge) and isinstance(right, AxisHinge):
         if left.axis == right.axis:
             return left.compose_same_axis(right)
         return left.promote().compose(right.promote()).minimize()
 
-    if isinstance(left, (AxisHinge, CartanRelation)) and isinstance(right, (AxisHinge, CartanRelation)):
+    simple = (AxisHinge, CartanRelation)
+    if isinstance(left, simple) and isinstance(right, simple):
         lcartan = left.promote() if isinstance(left, AxisHinge) else left
         rcartan = right.promote() if isinstance(right, AxisHinge) else right
         return lcartan.compose(rcartan).minimize()
 
-    lmat = left.to_unitary() if hasattr(left, "to_unitary") else left.to_unitary()
-    rmat = right.to_unitary() if hasattr(right, "to_unitary") else right.to_unitary()
     # Function composition convention: left after right.
-    return QuaternionCartanBlock.from_unitary(np.asarray(lmat) @ np.asarray(rmat))
+    return QuaternionCartanBlock.from_unitary(left.to_unitary() @ right.to_unitary())
 
 
-def compress_unitary(unitary: NDArray[np.complex128], *, atol: float = _TOL) -> RelationalOperator:
-    """Decompose an arbitrary two-qubit unitary and demote when structure allows.
+def compress_unitary(
+    unitary: NDArray[np.complex128],
+    *,
+    atol: float = _TOL,
+) -> RelationalOperator:
+    """Decompose an arbitrary unitary and demote when proven structure allows."""
+    block = QuaternionCartanBlock.from_unitary(
+        np.asarray(unitary, dtype=np.complex128)
+    )
 
-    General decomposition uses ``QuaternionCartanBlock.from_unitary``.  If all
-    local quaternion shells are identity (within ``atol``), the result is
-    reduced to CartanRelation and, when only one coordinate is active, further
-    to AxisHinge.
-    """
-    block = QuaternionCartanBlock.from_unitary(np.asarray(unitary, dtype=np.complex128))
+    def identity(quaternion: QuaternionTuple) -> bool:
+        return bool(
+            np.allclose(
+                np.asarray(quaternion, dtype=float),
+                np.asarray(IDENTITY_QUATERNION),
+                atol=atol,
+                rtol=0.0,
+            )
+        )
 
-    def identity(q: QuaternionTuple) -> bool:
-        return bool(np.allclose(np.asarray(q, dtype=float), np.asarray(IDENTITY_QUATERNION), atol=atol, rtol=0.0))
-
-    if not all(identity(q) for q in (block.left_q0, block.left_q1, block.right_q0, block.right_q1)):
+    quaternions = (
+        block.left_q0,
+        block.left_q1,
+        block.right_q0,
+        block.right_q1,
+    )
+    if not all(identity(quaternion) for quaternion in quaternions):
         return block
     if abs(block.global_phase) > atol:
         return block
 
-    # Stored Weyl coordinates exp[i(aXX+bYY+cZZ)] map to rotation coordinates -2(a,b,c).
-    relation = CartanRelation(-2.0 * block.cartan_a, -2.0 * block.cartan_b, -2.0 * block.cartan_c)
+    relation = CartanRelation(
+        -2.0 * block.cartan_a,
+        -2.0 * block.cartan_b,
+        -2.0 * block.cartan_c,
+    )
     return relation.minimize(atol=atol)
