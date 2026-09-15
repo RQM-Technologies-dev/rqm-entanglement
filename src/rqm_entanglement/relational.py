@@ -20,14 +20,17 @@ from typing import Literal
 import numpy as np
 from numpy.typing import NDArray
 
-from rqm_entanglement.adapters.rqm_core_adapter import QuaternionTuple
+from rqm_entanglement.adapters.rqm_core_adapter import (
+    QuaternionTuple,
+    quaternion_to_su2_matrix,
+)
 from rqm_entanglement.canonical import (
     canonical_entangler,
     xx_rotation,
     yy_rotation,
     zz_rotation,
 )
-from rqm_entanglement.su4 import QuaternionCartanBlock, rotation_to_weyl_coordinates
+from rqm_entanglement.su4 import QuaternionCartanBlock
 
 Axis = Literal["xx", "yy", "zz"]
 IDENTITY_QUATERNION: QuaternionTuple = (1.0, 0.0, 0.0, 0.0)
@@ -45,12 +48,7 @@ class RelationalLevel(StrEnum):
 
 @dataclass(frozen=True)
 class BellHinge:
-    """Compressed Bell-sector state representation.
-
-    ``parity`` is the ZZ eigenvalue and ``phase`` is the XX eigenvalue.
-    The four sign pairs identify Phi+/Phi-/Psi+/Psi- respectively. The
-    maximally-entangled hinge angle is fixed at pi/2.
-    """
+    """Compressed Bell-sector state representation."""
 
     parity: Literal[-1, 1]
     phase: Literal[-1, 1]
@@ -162,17 +160,8 @@ class CartanRelation:
         return self
 
     def promote(self) -> QuaternionCartanBlock:
-        a, b, c = rotation_to_weyl_coordinates(self.c1, self.c2, self.c3)
-        return QuaternionCartanBlock.from_components(
-            left_q0=IDENTITY_QUATERNION,
-            left_q1=IDENTITY_QUATERNION,
-            cartan_a=a,
-            cartan_b=b,
-            cartan_c=c,
-            right_q0=IDENTITY_QUATERNION,
-            right_q1=IDENTITY_QUATERNION,
-            global_phase=0.0,
-        )
+        """Promote through exact SU(4) recanonicalization into the Weyl chamber."""
+        return QuaternionCartanBlock.from_unitary(self.to_unitary())
 
 
 RelationalOperator = AxisHinge | CartanRelation | QuaternionCartanBlock
@@ -190,6 +179,13 @@ def relational_level(value: BellHinge | RelationalOperator) -> RelationalLevel:
     raise TypeError(f"unsupported relational representation: {type(value)!r}")
 
 
+def _local_matrix(q0: QuaternionTuple, q1: QuaternionTuple) -> NDArray[np.complex128]:
+    return np.asarray(
+        np.kron(quaternion_to_su2_matrix(q1), quaternion_to_su2_matrix(q0)),
+        dtype=np.complex128,
+    )
+
+
 def promote_with_local_frames(
     relation: AxisHinge | CartanRelation,
     *,
@@ -199,19 +195,15 @@ def promote_with_local_frames(
     right_q1: QuaternionTuple = IDENTITY_QUATERNION,
     global_phase: float = 0.0,
 ) -> QuaternionCartanBlock:
-    """Promote a nonlocal relation when independent local frames are required."""
+    """Promote a relation plus local frames via exact SU(4) recanonicalization."""
     cartan = relation.promote() if isinstance(relation, AxisHinge) else relation
-    a, b, c = rotation_to_weyl_coordinates(cartan.c1, cartan.c2, cartan.c3)
-    return QuaternionCartanBlock.from_components(
-        left_q0=left_q0,
-        left_q1=left_q1,
-        cartan_a=a,
-        cartan_b=b,
-        cartan_c=c,
-        right_q0=right_q0,
-        right_q1=right_q1,
-        global_phase=global_phase,
+    unitary = (
+        np.exp(1j * global_phase)
+        * _local_matrix(left_q0, left_q1)
+        @ cartan.to_unitary()
+        @ _local_matrix(right_q0, right_q1)
     )
+    return QuaternionCartanBlock.from_unitary(unitary)
 
 
 def compose_relations(
@@ -230,7 +222,6 @@ def compose_relations(
         rcartan = right.promote() if isinstance(right, AxisHinge) else right
         return lcartan.compose(rcartan).minimize()
 
-    # Function composition convention: left after right.
     return QuaternionCartanBlock.from_unitary(left.to_unitary() @ right.to_unitary())
 
 
