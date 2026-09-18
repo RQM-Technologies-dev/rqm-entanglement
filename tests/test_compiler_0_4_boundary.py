@@ -1,10 +1,16 @@
-from pathlib import Path
 import tomllib
+from pathlib import Path
+
 import numpy as np
 
 from rqm_entanglement import (
-    AxisHinge, CartanRelation, QuaternionCartanBlock,
-    compose_relations, xx_rotation, yy_rotation, zz_rotation,
+    AxisHinge,
+    CartanRelation,
+    QuaternionCartanBlock,
+    compose_relations,
+    xx_rotation,
+    yy_rotation,
+    zz_rotation,
 )
 
 ROOT=Path(__file__).resolve().parents[1]
