@@ -14,6 +14,18 @@ define native quaternionic composite mechanics. See
 
 ---
 
+## Compiler 0.4 ownership boundary
+
+For the 0.4 compiler line, `rqm-entanglement` remains the canonical owner of
+nonlocal two-qubit mathematics: `AxisHinge`, `CartanRelation`,
+`QuaternionCartanBlock`, canonical XX/YY/ZZ pair rotations, relational
+promotion/demotion, SU(4) reconstruction, and Weyl classification.
+
+`rqm-compiler` owns recognition, routing, query planning, complexity
+accounting, and fallback policy. It must consume these mathematical semantics
+rather than redefine them. See
+[docs/COMPILER_0_4_BOUNDARY.md](docs/COMPILER_0_4_BOUNDARY.md).
+
 ## Architecture boundary with `rqm-core`
 
 | Layer | Owns |
