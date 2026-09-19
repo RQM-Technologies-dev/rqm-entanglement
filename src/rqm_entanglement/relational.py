@@ -30,7 +30,8 @@ from rqm_entanglement.canonical import (
     yy_rotation,
     zz_rotation,
 )
-from rqm_entanglement.su4 import QuaternionCartanBlock
+from rqm_entanglement.su4 import (QuaternionCartanBlock, rotation_to_weyl_coordinates,
+                                  in_weyl_chamber)
 
 Axis = Literal["xx", "yy", "zz"]
 IDENTITY_QUATERNION: QuaternionTuple = (1.0, 0.0, 0.0, 0.0)
@@ -161,7 +162,11 @@ class CartanRelation:
 
     def promote(self) -> QuaternionCartanBlock:
         """Promote through exact SU(4) recanonicalization into the Weyl chamber."""
-        return QuaternionCartanBlock.from_unitary(self.to_unitary())
+        # A negative first rotation coordinate is necessary for this chamber.
+        # Keep the common noncanonical path as cheap as the previous fallback.
+        if self.c1 > 0.0:
+            return QuaternionCartanBlock.from_unitary(self.to_unitary())
+        return promote_with_local_frames(self)
 
 
 RelationalOperator = AxisHinge | CartanRelation | QuaternionCartanBlock
@@ -197,6 +202,16 @@ def promote_with_local_frames(
 ) -> QuaternionCartanBlock:
     """Promote a relation plus local frames via exact SU(4) recanonicalization."""
     cartan = relation.promote() if isinstance(relation, AxisHinge) else relation
+    coordinates=rotation_to_weyl_coordinates(cartan.c1,cartan.c2,cartan.c3)
+    # Only bypass decomposition when coordinates ALREADY satisfy the canonical
+    # chamber exactly. Outside it, keep the established recanonicalization path.
+    if in_weyl_chamber(coordinates,tolerance=0.0):
+        return QuaternionCartanBlock.from_components(
+            left_q0=left_q0,left_q1=left_q1,right_q0=right_q0,right_q1=right_q1,
+            cartan_a=coordinates[0],cartan_b=coordinates[1],cartan_c=coordinates[2],
+            global_phase=global_phase)
+    if global_phase == 0.0 and all(q == IDENTITY_QUATERNION for q in (left_q0,left_q1,right_q0,right_q1)):
+        return QuaternionCartanBlock.from_unitary(cartan.to_unitary())
     unitary = (
         np.exp(1j * global_phase)
         * _local_matrix(left_q0, left_q1)
