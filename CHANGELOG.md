@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2 — release candidate
+
+- Package the analytic real Pauli-coefficient transfer module required by
+  rqm-compiler 0.3.7.
+- Include canonical Cartan promotion without redundant reconstruction while
+  retaining decomposition for noncanonical coordinates.
+- Apply formatting and type annotations required by existing release checks;
+  no additional runtime features are introduced during qualification.
+
 ## [0.2.1](https://github.com/RQM-Technologies-dev/rqm-entanglement/compare/v0.2.0...v0.2.1) (2026-07-29)
 
 

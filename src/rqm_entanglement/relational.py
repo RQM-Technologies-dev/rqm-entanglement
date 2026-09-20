@@ -30,8 +30,11 @@ from rqm_entanglement.canonical import (
     yy_rotation,
     zz_rotation,
 )
-from rqm_entanglement.su4 import (QuaternionCartanBlock, rotation_to_weyl_coordinates,
-                                  in_weyl_chamber)
+from rqm_entanglement.su4 import (
+    QuaternionCartanBlock,
+    in_weyl_chamber,
+    rotation_to_weyl_coordinates,
+)
 
 Axis = Literal["xx", "yy", "zz"]
 IDENTITY_QUATERNION: QuaternionTuple = (1.0, 0.0, 0.0, 0.0)
@@ -202,15 +205,23 @@ def promote_with_local_frames(
 ) -> QuaternionCartanBlock:
     """Promote a relation plus local frames via exact SU(4) recanonicalization."""
     cartan = relation.promote() if isinstance(relation, AxisHinge) else relation
-    coordinates=rotation_to_weyl_coordinates(cartan.c1,cartan.c2,cartan.c3)
+    coordinates = rotation_to_weyl_coordinates(cartan.c1, cartan.c2, cartan.c3)
     # Only bypass decomposition when coordinates ALREADY satisfy the canonical
     # chamber exactly. Outside it, keep the established recanonicalization path.
-    if in_weyl_chamber(coordinates,tolerance=0.0):
+    if in_weyl_chamber(coordinates, tolerance=0.0):
         return QuaternionCartanBlock.from_components(
-            left_q0=left_q0,left_q1=left_q1,right_q0=right_q0,right_q1=right_q1,
-            cartan_a=coordinates[0],cartan_b=coordinates[1],cartan_c=coordinates[2],
-            global_phase=global_phase)
-    if global_phase == 0.0 and all(q == IDENTITY_QUATERNION for q in (left_q0,left_q1,right_q0,right_q1)):
+            left_q0=left_q0,
+            left_q1=left_q1,
+            right_q0=right_q0,
+            right_q1=right_q1,
+            cartan_a=coordinates[0],
+            cartan_b=coordinates[1],
+            cartan_c=coordinates[2],
+            global_phase=global_phase,
+        )
+    if global_phase == 0.0 and all(
+        q == IDENTITY_QUATERNION for q in (left_q0, left_q1, right_q0, right_q1)
+    ):
         return QuaternionCartanBlock.from_unitary(cartan.to_unitary())
     unitary = (
         np.exp(1j * global_phase)
@@ -246,9 +257,7 @@ def compress_unitary(
     atol: float = _TOL,
 ) -> RelationalOperator:
     """Decompose an arbitrary unitary and demote when proven structure allows."""
-    block = QuaternionCartanBlock.from_unitary(
-        np.asarray(unitary, dtype=np.complex128)
-    )
+    block = QuaternionCartanBlock.from_unitary(np.asarray(unitary, dtype=np.complex128))
 
     def identity(quaternion: QuaternionTuple) -> bool:
         return bool(
