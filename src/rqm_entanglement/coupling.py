@@ -101,7 +101,9 @@ _SUPPORTED_MEASURED_GATES = {
     "iswap",
 }
 
-_TWO_QUBIT_GATES = {"cx", "cnot", "cy", "cz", "swap", "iswap"}
+# Structural gate presence is not a claim about the final state's entanglement.
+# Pauli-pair rotations remain outside _SUPPORTED_MEASURED_GATES.
+_TWO_QUBIT_GATES = {"cx", "cnot", "cy", "cz", "swap", "iswap", "rxx", "ryy", "rzz"}
 _MEASURED_LIMITATION = (
     "Measured entanglement analysis is currently limited to supported ideal "
     "2-qubit circuits."
