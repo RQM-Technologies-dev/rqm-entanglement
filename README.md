@@ -283,3 +283,12 @@ Run tests:
 ```bash
 pytest
 ```
+
+### Structural Pauli-pair fallback
+
+Coupling diagnostics recognize `rxx`, `ryy`, and `rzz` as two-qubit gate families
+for structural presence/counts, including zero-angle and canceling sequences.
+This does not imply an entangled final state. These gates remain outside the
+numerical coupling simulator's supported set: qualitative fallback reports
+`is_entangled: null`, no numerical pair metrics and explicit limitations;
+`allow_qualitative_fallback: false` rejects the unsupported analysis.
