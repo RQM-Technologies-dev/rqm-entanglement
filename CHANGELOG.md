@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/RQM-Technologies-dev/rqm-entanglement/compare/v0.2.2...v0.2.3) (2026-11-01)
+
+
+### Bug Fixes
+
+* remove stale release override and allow compatible core series ([#19](https://github.com/RQM-Technologies-dev/rqm-entanglement/issues/19)) ([93e9e0f](https://github.com/RQM-Technologies-dev/rqm-entanglement/commit/93e9e0fba4f4660c38ef491f9068519b5b4c94bf))
+* report Pauli entangling gates in unsupported diagnostics ([#17](https://github.com/RQM-Technologies-dev/rqm-entanglement/issues/17)) ([91f7b45](https://github.com/RQM-Technologies-dev/rqm-entanglement/commit/91f7b452f5b0a1e971b0b63b801047869c8134b5))
+
 ## [0.2.2](https://github.com/RQM-Technologies-dev/rqm-entanglement/compare/v0.2.1...v0.2.2) (2026-09-20)
 
 
