@@ -11,7 +11,7 @@ license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 dependencies = [
     "numpy",
-    "rqm-core>=0.2,<0.3",
+    "rqm-core>=0.2,<0.4",
 ]
 
 [project.optional-dependencies]
