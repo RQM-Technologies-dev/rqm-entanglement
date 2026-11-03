@@ -31,6 +31,8 @@ from rqm_entanglement.canonical import (
     zz_rotation,
 )
 from rqm_entanglement.su4 import (
+    CONVENTION_VERSION,
+    RECONSTRUCTION_TOLERANCE,
     QuaternionCartanBlock,
     in_weyl_chamber,
     rotation_to_weyl_coordinates,
@@ -232,11 +234,83 @@ def promote_with_local_frames(
     return QuaternionCartanBlock.from_unitary(unitary)
 
 
+def _compose_cancelled_local_frames(
+    left: QuaternionCartanBlock,
+    right: QuaternionCartanBlock,
+) -> QuaternionCartanBlock | None:
+    """Try a phase-sensitive, tolerance-gated canonical composition.
+
+    For ``left @ right``, the middle local factors are the right shell of
+    ``left`` times the left shell of ``right``. Only scalar +/-identity
+    factors with component-exact quaternion conjugacy are recognized. The
+    matrix tolerance checks floating-point reconstruction, not approximate
+    cancellation of distinct rotations. This is ordinary Cartan structure, not an E8
+    recognition rule. The dense final proof is intentional and included in
+    the cost of this conservative experimental path.
+    """
+    if (
+        left.convention_version != CONVENTION_VERSION
+        or right.convention_version != CONVENTION_VERSION
+    ):
+        return None
+    coordinates = tuple(a + b for a, b in zip(left.cartan, right.cartan, strict=True))
+    if not in_weyl_chamber(coordinates, tolerance=0.0):
+        return None
+
+    phase = left.global_phase + right.global_phase
+    for first, second in (
+        (left.right_q0, right.left_q0),
+        (left.right_q1, right.left_q1),
+    ):
+        inverse = (second[0], -second[1], -second[2], -second[3])
+        if first == inverse:
+            sign = 1.0
+        elif first == tuple(-value for value in inverse):
+            sign = -1.0
+        else:
+            return None
+        middle = quaternion_to_su2_matrix(first) @ quaternion_to_su2_matrix(second)
+        residual = float(np.max(np.abs(middle - sign * np.eye(2))))
+        if not math.isfinite(residual) or residual > _TOL:
+            return None
+        if sign < 0.0:
+            phase += math.pi
+
+    candidate = QuaternionCartanBlock.from_components(
+        left_q0=left.left_q0,
+        left_q1=left.left_q1,
+        right_q0=right.right_q0,
+        right_q1=right.right_q1,
+        cartan_a=coordinates[0],
+        cartan_b=coordinates[1],
+        cartan_c=coordinates[2],
+        global_phase=phase,
+    )
+    expected = left.to_unitary() @ right.to_unitary()
+    error = float(np.max(np.abs(expected - candidate.to_unitary())))
+    if not math.isfinite(error) or error > RECONSTRUCTION_TOLERANCE:
+        return None
+    return candidate
+
+
 def compose_relations(
     left: RelationalOperator,
     right: RelationalOperator,
+    *,
+    prefer_frame_cancellation: bool = False,
 ) -> RelationalOperator:
-    """Compose while staying in the smallest representation known to be closed."""
+    """Compose while staying in the smallest representation known to be closed.
+
+    The default retains the established decomposition behavior. Opting into
+    ``prefer_frame_cancellation`` avoids KAK only for two canonical blocks
+    whose middle quaternion factors are component-exact conjugates up to
+    scalar signs and whose summed
+    coordinates remain in the Weyl chamber without tolerance slack. A final
+    full-operator proof preserves composable global phase; unsupported or
+    unproven cases use the existing decomposition path. Near-but-distinct frames
+    are not accepted as cancellation. Matrix reconstruction is numerical under
+    the stated tolerances; repeated compositions still need end-to-end verification.
+    """
     if isinstance(left, AxisHinge) and isinstance(right, AxisHinge):
         if left.axis == right.axis:
             return left.compose_same_axis(right)
@@ -247,6 +321,15 @@ def compose_relations(
         lcartan = left.promote() if isinstance(left, AxisHinge) else left
         rcartan = right.promote() if isinstance(right, AxisHinge) else right
         return lcartan.compose(rcartan).minimize()
+
+    if (
+        prefer_frame_cancellation
+        and isinstance(left, QuaternionCartanBlock)
+        and isinstance(right, QuaternionCartanBlock)
+    ):
+        candidate = _compose_cancelled_local_frames(left, right)
+        if candidate is not None:
+            return candidate
 
     return QuaternionCartanBlock.from_unitary(left.to_unitary() @ right.to_unitary())
 
