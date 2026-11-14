@@ -292,3 +292,23 @@ This does not imply an entangled final state. These gates remain outside the
 numerical coupling simulator's supported set: qualitative fallback reports
 `is_entangled: null`, no numerical pair metrics and explicit limitations;
 `allow_qualitative_fallback: false` rejects the unsupported analysis.
+
+### Experimental guarded block composition
+
+`compose_relations(left, right, prefer_frame_cancellation=True)` can avoid
+Qiskit KAK decomposition when both operands are `QuaternionCartanBlock` objects
+with exactly conjugate middle quaternion components, up to scalar signs, and
+the summed Cartan coordinates are already inside the Weyl chamber. The default
+is `False`, preserving the existing decomposition behavior.
+
+This opt-in path retains outer local frames and scalar phase, checks middle
+matrix reconstruction at absolute `1e-12`, and requires a full-operator residual
+at most `1e-10`. Near-but-distinct quaternion frames are not treated as inverse
+pairs. Off-chamber, noncancelling, or unproven cases use the existing KAK fallback.
+A recognized case does not require the optional Qiskit dependency; fallback does.
+
+This is conventional local-frame cancellation and commuting Cartan algebra,
+not an E8-specific method or a general KAK replacement. Dense numerical proof
+has a measurable cost. Factorization and fingerprints may differ on the opt-in
+path despite operator equivalence. Repeated composition still requires an
+end-to-end error check; local numerical bounds are not a global error budget.
