@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 qiskit = [
-    "qiskit>=2.3,<2.6",
+    "qiskit>=2.3,<2.7",
 ]
 dev = [
     "pytest>=7",
@@ -24,7 +24,7 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.8",
     "numpy>=1.24,<2.5",
-    "qiskit>=2.3,<2.6",
+    "qiskit>=2.3,<2.7",
 ]
 
 [tool.setuptools.packages.find]
