@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/RQM-Technologies-dev/rqm-entanglement/compare/v0.2.3...v0.3.0) (2026-11-14)
+
+
+### Features
+
+* add opt-in phase-safe Cartan frame cancellation ([#21](https://github.com/RQM-Technologies-dev/rqm-entanglement/issues/21)) ([18fe67e](https://github.com/RQM-Technologies-dev/rqm-entanglement/commit/18fe67e592e6d89224631d7de1d9a23171513e67))
+
 ## [0.2.3](https://github.com/RQM-Technologies-dev/rqm-entanglement/compare/v0.2.2...v0.2.3) (2026-11-01)
 
 
